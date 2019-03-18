@@ -2,7 +2,7 @@
 
 namespace App\Helpers;
 
-use FireBase\JWT\JWT;
+use Firebase\JWT\JWT;
 use Illuminate\Support\Facades\DB;
 use App\User;
 
@@ -43,13 +43,14 @@ class JwtAuth{
                 'name' => $user->name,
                 'surname' => $user->surname,
                 'iat' => time(),
-                'exp' => time() + (7 * 24 * 60 * 60)
+                'exp' => time() + (7 * 24 * 60 * 10)
             );
 
             $jwt = JWT::encode($token, $this->key, 'HS256');
-            $decoded = JWT::decoded($jwt, $this->key, array('HS256'));
+            $decoded = JWT::decode($jwt, $this->key, array('HS256'));
 
-            if(!is_null($getToken)){
+
+            if(is_null($getToken)){
 
                 return $jwt;
 
@@ -83,7 +84,7 @@ class JwtAuth{
 
         }
 
-        if(is_object($decoded) && isset($decoded->sub)){
+        if(isset($decoded) && is_object($decoded) && isset($decoded->sub)){
 
             $auth = true;
 
