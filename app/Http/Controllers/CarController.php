@@ -9,23 +9,122 @@ use App\Car;
 
 class CarController extends Controller
 {
-    public function index(Request $request){
+    public function index(){
         
+        // registros de la tabla car
+        $cars = Car::all()->load('user');
+
+        return response()->json(array(
+
+            'cars' => $cars,
+            'status' => 'success' 
+        ), 200);
+    }
+
+    public function show($id){
+
+        $car = Car::find($id)->load('user');
+
+        return response()->json(array(
+            
+            'car' => $car,
+            'status' => 'success'
+        
+        ), 200);
+    }
+
+    public function update($id, Request $request){
+
         $hash = $request->header('Authorization', null);
 
         $jwt = new JwtAuth();
-        $checkToken = $jwt->checkToken($hash);
+        $checkToken = $jwt->checkToken($hash);   
 
         if($checkToken){
 
-            echo "identificado";
-            die();
+            // recoger parametros post
+            $json = $request->input('json', null);
+            $params = json_decode($json);
+
+            $params_array = json_decode($json, true);
+
+            // validar datos
+            $validate = \Validator::make($params_array, [
+
+                'title' => 'required|min:5',
+                'description' => 'required',
+                'price' => 'required',
+                'status' => 'required'
+            ]);
+
+            if($validate->fails()){
+
+                return response()->json($validate->errors(), 400);
+            }
+
+            // actualizar registro
+            $car = Car::where('id', $id)->update($params_array);
+
+            $data = array(
+
+                'car' => $params,
+                'status' => 'success',
+                'code' => 200
+            );
 
         }else{
 
-            echo "Erro de identificacion";
-            die();
+            $data = array(
+
+                'message' => 'login incorrecto',
+                'status' => 'error',
+                'code' => 400
+            );
+
+            return response()->json($data, 400);
         }
+
+        return response()->json($data, 200);
+
+    }
+
+    public function destroy($id, Request $request){
+        
+        $hash = $request->header('Authorization', null);
+
+        $jwtAuth = new JwtAuth();
+        $checkToken = $jwtAuth->checkToken($hash);
+    
+        if($checkToken){
+
+            // comprobar que existe el registro
+            $car = Car::find($id);
+            
+            // borrarlo
+            $car->delete();
+
+            // devolverlo
+            $data = array(
+
+                'car' => $car,
+                'status' => 'success',
+                'code' => 200
+            );
+
+        }else{
+
+            $data = array(
+
+                'status' => 'error',
+                'code' => 400,
+                'message' => 'login incorrecto'
+
+            );
+
+            return response()->json($data, 400);
+        }
+
+        return response()->json($data, 200);
     }
 
     public function store(Request $request){
@@ -46,11 +145,8 @@ class CarController extends Controller
             $user = $jwt->checkToken($hash, true);
             
             // validacion de datos
-            $request->merge($params_array);
 
-            try{
-
-                $validate = $this->validate($request, [
+                $validate = \Validator::make($params_array, [
 
                     'title' => 'required|min:5',
                     'description' => 'required',
@@ -58,10 +154,11 @@ class CarController extends Controller
                     'status' => 'required'
                 ]);
 
-            }catch(\Illuminate\Validation\ValidationException $e){
+                if($validate->fails()){
 
-                return $e->getResponse();
-            }
+                    return response()->json($validate->errors(), 400);
+                }
+
 
             // guardar el coche
             
